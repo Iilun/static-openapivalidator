@@ -37,11 +37,18 @@ func validateResult(result TestResult, ctx context.Context) ([]ValidationResult,
 	}, nil
 }
 
+func computeError(err error) (string, []ValidationError, error) {
+	var multiError openapi3.MultiError
+	if errors.As(err, &multiError) {
+		return computeErrorFields(multiError)
+	}
+	return computeErrorFields([]error{err})
+}
+
 func computeErrorFields(multiError []error) (string, []ValidationError, error) {
 	var errAsString string
 	var validationErrors []ValidationError
 	for i := range multiError {
-
 		var schemaError *openapi3.SchemaError
 		if errors.As(multiError[i], &schemaError) {
 			if errAsString != "" && errAsString != schemaError.Reason {
@@ -78,14 +85,22 @@ func computeResultFields(validationError error) (string, string, []ValidationErr
 	var validationErrors []ValidationError
 	if validationError != nil {
 		status = "failure"
-		var multiError openapi3.MultiError
-		if errors.As(validationError, &multiError) {
-			errorTitle, validationErrors, err = computeErrorFields(multiError)
+		responseErr := new(openapi3filter.ResponseError)
+		requestErr := new(openapi3filter.RequestError)
+		if errors.As(validationError, &responseErr) {
+			errorTitle = responseErr.Reason
+			_, validationErrors, err = computeError(responseErr.Err)
+			if err != nil {
+				return "", "", nil, err
+			}
+		} else if errors.As(validationError, &requestErr) {
+			errorTitle = requestErr.Reason
+			_, validationErrors, err = computeError(requestErr.Err)
 			if err != nil {
 				return "", "", nil, err
 			}
 		} else {
-			errorTitle, validationErrors, err = computeErrorFields([]error{validationError})
+			errorTitle, validationErrors, err = computeError(validationError)
 			if err != nil {
 				return "", "", nil, err
 			}
