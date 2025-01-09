@@ -14,12 +14,14 @@ type TestResult struct {
 
 type TestRequest struct {
 	*openapi3filter.RequestValidationInput
-	Body string
+	Body         string
+	ParsingError string
 }
 
 type TestResponse struct {
 	*openapi3filter.ResponseValidationInput
-	Body string
+	Body         string
+	ParsingError string
 }
 
 type ValidationResult interface {
@@ -30,6 +32,7 @@ type ValidationResult interface {
 	GetUrl() string
 	GetBody() string
 	GetHeaders() map[string][]string
+	GetStatus() string
 }
 
 type ValidationError struct {
@@ -73,6 +76,10 @@ func (r RequestValidationResult) GetBody() string {
 
 func (r RequestValidationResult) GetHeaders() map[string][]string {
 	return r.Headers
+}
+
+func (r RequestValidationResult) GetStatus() string {
+	return r.Status
 }
 
 func (r RequestValidationResult) MarshalJSON() ([]byte, error) {
@@ -124,6 +131,10 @@ func (r ResponseValidationResult) GetBody() string {
 
 func (r ResponseValidationResult) GetHeaders() map[string][]string {
 	return r.Headers
+}
+
+func (r ResponseValidationResult) GetStatus() string {
+	return r.Status
 }
 
 func (r ResponseValidationResult) MarshalJSON() ([]byte, error) {

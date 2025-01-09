@@ -90,14 +90,31 @@ func formatId(fileOrigin, filename string) string {
 	return filename
 }
 
+func getHeaderValue(header string, headers map[string]string) string {
+	for key, value := range headers {
+		if strings.EqualFold(key, header) {
+			return value
+		}
+	}
+	return ""
+}
+
 func translateRequest(brunoRequest Request, router routers.Router) (*validator.TestRequest, error) {
 	// Translate request
 	var requestBody io.Reader
 	var prettyJSON bytes.Buffer
+	var parsingError string
 	if brunoRequest.Body != "" {
-		requestBody = strings.NewReader(string(brunoRequest.Body))
-		if err := json.Indent(&prettyJSON, []byte(brunoRequest.Body), "", "  "); err != nil {
-			return nil, err
+		// Multipart body
+		if strings.Contains(getHeaderValue("Content-Type", brunoRequest.Headers), "multipart/form-data") {
+			// Multipart in JSON report has no data as to what was sent, and not event the set fields
+			parsingError = "multipart/form-data is not supported"
+		} else {
+			// JSON Body
+			requestBody = strings.NewReader(string(brunoRequest.Body))
+			if err := json.Indent(&prettyJSON, []byte(brunoRequest.Body), "", "  "); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -122,7 +139,8 @@ func translateRequest(brunoRequest Request, router routers.Router) (*validator.T
 			PathParams: pathParams,
 			Route:      route,
 		},
-		Body: prettyJSON.String(),
+		Body:         prettyJSON.String(),
+		ParsingError: parsingError,
 	}
 
 	return &request, nil

@@ -60,13 +60,13 @@ func createTestcaseForTest(url string, test validator.ValidationResult) junit_xm
 		Classname: url,
 		Name:      testName,
 	}
-
-	if test.GetErrorSummary() != "" {
+	switch test.GetStatus() {
+	case validator.Failure:
 		tc.Failure = &junit_xml.Result{
 			Message: "Failed",
 			Data:    formatOutput(test),
 		}
-	} else {
+	default:
 		tc.SystemOut = &junit_xml.Output{Data: formatOutput(test)}
 	}
 	return tc
@@ -91,9 +91,13 @@ func formatOutput(test validator.ValidationResult) string {
 	}
 
 	// Log errors if exists
-
-	if test.GetErrorSummary() != "" {
-		sb.WriteString(fmt.Sprintf("Error summary: %s \n", test.GetErrorSummary()))
+	errorSummary := test.GetErrorSummary()
+	if errorSummary != "" {
+		prefix := "Error summary"
+		if test.GetStatus() == validator.Warning {
+			prefix = "Warning"
+		}
+		sb.WriteString(fmt.Sprintf("%s: %s \n", prefix, errorSummary))
 	}
 
 	if len(test.GetErrors()) > 0 {

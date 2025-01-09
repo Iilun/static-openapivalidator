@@ -8,6 +8,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 )
 
+const (
+	Failure = "failure"
+	Warning = "warning"
+	Success = "success"
+)
+
 func Validate(results []TestResult, ctx context.Context) ([]ValidationResult, error) {
 	var final []ValidationResult
 	for i := range results {
@@ -22,12 +28,12 @@ func Validate(results []TestResult, ctx context.Context) ([]ValidationResult, er
 
 // ctx contains the openapi spec
 func validateResult(result TestResult, ctx context.Context) ([]ValidationResult, error) {
-	requestResult, err := requestValidationResult(result, openapi3filter.ValidateRequest(ctx, result.Request.RequestValidationInput))
+	requestResult, err := requestValidationResult(result, ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	responseResult, err := responseValidationResult(result, openapi3filter.ValidateResponse(ctx, result.Response.ResponseValidationInput))
+	responseResult, err := responseValidationResult(result, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +85,12 @@ func computeErrorFields(multiError []error) (string, []ValidationError, error) {
 }
 
 func computeResultFields(validationError error) (string, string, []ValidationError, error) {
-	status := "success"
+	status := Success
 	var errorTitle string
 	var err error
 	var validationErrors []ValidationError
 	if validationError != nil {
-		status = "failure"
+		status = Failure
 		responseErr := new(openapi3filter.ResponseError)
 		requestErr := new(openapi3filter.RequestError)
 		if errors.As(validationError, &responseErr) {
@@ -109,10 +115,18 @@ func computeResultFields(validationError error) (string, string, []ValidationErr
 	return status, errorTitle, validationErrors, nil
 }
 
-func requestValidationResult(result TestResult, validationError error) (*RequestValidationResult, error) {
-	status, errAsString, validationErrors, err := computeResultFields(validationError)
-	if err != nil {
-		return nil, err
+func requestValidationResult(result TestResult, ctx context.Context) (*RequestValidationResult, error) {
+	var status, errAsString string
+	var validationErrors []ValidationError
+	var err error
+	if result.Request.ParsingError != "" {
+		status = Warning
+		errAsString = result.Request.ParsingError
+	} else {
+		status, errAsString, validationErrors, err = computeResultFields(openapi3filter.ValidateRequest(ctx, result.Request.RequestValidationInput))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &RequestValidationResult{
@@ -126,10 +140,19 @@ func requestValidationResult(result TestResult, validationError error) (*Request
 	}, nil
 }
 
-func responseValidationResult(result TestResult, validationError error) (*ResponseValidationResult, error) {
-	status, errAsString, validationErrors, err := computeResultFields(validationError)
-	if err != nil {
-		return nil, err
+func responseValidationResult(result TestResult, ctx context.Context) (*ResponseValidationResult, error) {
+	var status, errAsString string
+	var validationErrors []ValidationError
+	var err error
+
+	if result.Response.ParsingError != "" {
+		status = Warning
+		errAsString = result.Response.ParsingError
+	} else {
+		status, errAsString, validationErrors, err = computeResultFields(openapi3filter.ValidateResponse(ctx, result.Response.ResponseValidationInput))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ResponseValidationResult{

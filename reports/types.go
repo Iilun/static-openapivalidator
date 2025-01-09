@@ -10,8 +10,10 @@ type Report struct {
 type Summary struct {
 	TotalRequests   int `json:"totalRequests"`
 	PassedRequests  int `json:"passedRequests"`
+	WarnRequests    int `json:"warnRequests"`
 	FailedRequests  int `json:"failedRequests"`
 	TotalResponses  int `json:"totalResponses"`
 	PassedResponses int `json:"passedResponses"`
+	WarnResponses   int `json:"warnResponses"`
 	FailedResponses int `json:"failedResponses"`
 }

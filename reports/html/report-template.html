@@ -96,6 +96,13 @@
                 >
                 </n-statistic>
             </n-alert>
+            <n-alert :type="summaryWarned ? 'warning' : 'success'">
+                <n-statistic
+                        label="Total Checks Warned"
+                        :value="summaryWarned"
+                >
+                </n-statistic>
+            </n-alert>
             <n-alert :type="summaryFailed ? 'error' : 'success'">
                 <n-statistic
                         label="Total Checks Failed"
@@ -130,7 +137,7 @@
     >
         <template #header>
             <n-alert
-                    :type="hasError ? 'error' : 'success'"
+                    :type="hasError  ? 'error' : hasWarning  ? 'warning' : 'success'"
                     :bordered="false"
             >
                 <template #header>
@@ -150,16 +157,19 @@
     >
         <template #header>
             <n-alert
-                    :type="hasError  ? 'error' : 'success'"
+                    :type="hasError  ? 'error' : hasWarning  ? 'warning' : 'success'"
                     :bordered="false"
             >
                 <template #header>
-                    {{name}} - {{hasError ? "Failed" : "Passed" }}
+                    {{name}} - {{hasError ? "Failed" : hasWarning  ? 'Warn' : "Passed" }}
                 </template>
             </n-alert>
         </template>
         <n-flex vertical>
             <n-alert v-if="hasError" title="Error" type="error">
+                {{result.error}}
+            </n-alert>
+            <n-alert v-if="hasWarning" title="Warning" type="warning">
                 {{result.error}}
             </n-alert>
             <n-card :title="result.type.toUpperCase() + ' HEADERS'">
@@ -235,6 +245,10 @@
                     key: 'passed'
                 },
                 {
+                    title: 'WARN',
+                    key: 'warn'
+                },
+                {
                     title: 'FAILED',
                     key: 'failed'
                 }
@@ -244,13 +258,15 @@
                     title: 'Requests',
                     total: props.res.summary.totalRequests,
                     passed: props.res.summary.passedRequests,
-                    failed: props.res.summary.failedRequests
+                    failed: props.res.summary.failedRequests,
+                    warn: props.res.summary.warnRequests
                 },
                 {
                     title: 'Responses',
                     total: props.res.summary.totalResponses,
                     passed: props.res.summary.passedResponses,
-                    failed: props.res.summary.failedResponses
+                    failed: props.res.summary.failedResponses,
+                    warn: props.res.summary.warnResponses
                 }
             ]);
             const summaryTotal = computed(() => {
@@ -259,11 +275,15 @@
             const summaryFailed = computed(
                 () => props.res.summary.failedRequests + props.res.summary.failedResponses
             );
+            const summaryWarned = computed(
+                () => props.res.summary.warnRequests + props.res.summary.warnResponses
+            );
             return {
                 summaryColumns,
                 summaryData,
                 summaryTotal,
                 summaryFailed,
+                summaryWarned,
             };
         }
     });
@@ -318,10 +338,12 @@
                 return props.results.length
             });
 
-            const hasError = computed(() => props.results.some((r) => !!r.error));
+            const hasError = computed(() => props.results.some((r) => r.status === 'failure'));
+            const hasWarning = computed(() => props.results.some((r) =>  r.status === 'warning'));
             return {
                 totalPassed,
                 total,
+                hasWarning,
                 hasError,
                 group: props.group,
                 results: props.results
@@ -359,12 +381,14 @@
                 return mapHeaderToTableData(props.result.headers);
             });
 
-            const hasError = computed(() => !!props.result.error);
+            const hasError = computed(() => props.result.status === 'failure');
+            const hasWarning = computed(() => props.result.status === 'warning');
             const name = computed(() => props.result.id + " - " + String(props.result.type).charAt(0).toUpperCase() + String(props.result.type).slice(1));
             return {
                 headerColumns,
                 headerData,
                 hasError,
+                hasWarning,
                 result: props.result,
                 name
             };
