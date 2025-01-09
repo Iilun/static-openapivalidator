@@ -5,9 +5,10 @@ type Report struct {
 }
 
 type Result struct {
-	Test     Test     `json:"test"`
-	Request  Request  `json:"request"`
-	Response Response `json:"response"`
+	FileOrigin string
+	Test       Test     `json:"test"`
+	Request    Request  `json:"request"`
+	Response   Response `json:"response"`
 }
 
 type Test struct {

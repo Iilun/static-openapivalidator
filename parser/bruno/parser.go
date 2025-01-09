@@ -8,26 +8,41 @@ import (
 	"github.com/getkin/kin-openapi/routers"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"static-openapivalidator/validator"
 	"strings"
 )
 
 type Parser struct{}
 
-func (p Parser) Parse(report []byte, router routers.Router) ([]validator.TestResult, error) {
+func (p Parser) Parse(reportFilePaths []string, router routers.Router) ([]validator.TestResult, error) {
 	var reports []Report
-	err := json.Unmarshal(report, &reports)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(reports) == 0 {
-		return nil, errors.New("no report in report file")
-	}
-
 	var results []Result
-	for i := range reports {
-		results = append(results, reports[i].Results...)
+
+	for _, path := range reportFilePaths {
+		reportBytes, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(reportBytes, &reports)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(reports) == 0 {
+			return nil, errors.New("no report in report file")
+		}
+
+		for i := range reports {
+			for j := range reports[i].Results {
+				if len(reportFilePaths) > 1 {
+					reports[i].Results[j].FileOrigin = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+				}
+				results = append(results, reports[i].Results[j])
+			}
+		}
 	}
 
 	translated, err := translateResults(results, router)
@@ -61,14 +76,17 @@ func brunoToOpenAPI(result Result, router routers.Router) (validator.TestResult,
 	return validator.TestResult{
 		Request:  request,
 		Response: response,
-		Id:       formatId(result.Test.Filename),
+		Id:       formatId(result.FileOrigin, result.Test.Filename),
 	}, nil
 }
 
-func formatId(filename string) string {
+func formatId(fileOrigin, filename string) string {
 	filename = strings.TrimSuffix(filename, ".bru")
 	filename = strings.TrimSuffix(filename, "-muted-")
 	filename = strings.TrimSpace(filename)
+	if fileOrigin != "" {
+		filename = fileOrigin + "/" + filename
+	}
 	return filename
 }
 

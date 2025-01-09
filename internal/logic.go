@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
-	"os"
+	struct_validator "github.com/go-playground/validator/v10"
 	test_report "static-openapivalidator/parser"
 	"static-openapivalidator/parser/bruno"
 	"static-openapivalidator/reports"
@@ -17,17 +17,22 @@ import (
 )
 
 type Params struct {
-	Ctx            context.Context
-	ApiFilePath    string
-	ReportFilePath string
-	Format         string
-	JunitFilePath  string
-	HtmlFilePath   string
-	JsonFilePath   string
+	Ctx             context.Context
+	ApiFilePath     string   `validate:"required,file"`
+	ReportFilePaths []string `validate:"gt=0,dive,file"`
+	Format          string   `validate:"required"`
+	JunitFilePath   string   `validate:"omitempty,filepath"`
+	HtmlFilePath    string   `validate:"omitempty,filepath"`
+	JsonFilePath    string   `validate:"omitempty,filepath"`
 }
 
 func (params Params) Execute() error {
-	// TODO: strcut validation
+	err := struct_validator.New().Struct(params)
+	if err != nil {
+		// TODO: improve error messages
+		return errors.New("invalid input: " + err.Error())
+	}
+
 	results, err := params.checkResponses()
 
 	if err != nil {
@@ -38,12 +43,6 @@ func (params Params) Execute() error {
 }
 
 func (params Params) checkResponses() ([]validator.ValidationResult, error) {
-	// Read report file
-	reportBytes, err := os.ReadFile(params.ReportFilePath)
-	if err != nil {
-		return nil, err
-	}
-
 	// Load open api ref
 	loader := &openapi3.Loader{Context: params.Ctx, IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(params.ApiFilePath)
@@ -68,7 +67,7 @@ func (params Params) checkResponses() ([]validator.ValidationResult, error) {
 		return nil, err
 	}
 
-	results, err := parser.Parse(reportBytes, router)
+	results, err := parser.Parse(params.ReportFilePaths, router)
 	if err != nil {
 		return nil, err
 	}

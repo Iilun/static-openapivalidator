@@ -28,10 +28,10 @@ func main() {
 				Usage:    "Load openapi spec from `FILE`",
 				Required: true,
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:     reportFlagName,
 				Aliases:  []string{"r"},
-				Usage:    "Load report from `FILE`",
+				Usage:    "Load report from `FILES`",
 				Required: true,
 			},
 			&cli.StringFlag{
@@ -55,13 +55,13 @@ func main() {
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			return internal.Params{
-				Ctx:            ctx,
-				ApiFilePath:    cmd.String(specFlagName),
-				ReportFilePath: cmd.String(reportFlagName),
-				Format:         cmd.String(formatFlagName),
-				JunitFilePath:  cmd.String(reportJUNITFlagName),
-				HtmlFilePath:   cmd.String(reportHTMLFlagName),
-				JsonFilePath:   cmd.String(reportJSONFlagName),
+				Ctx:             ctx,
+				ApiFilePath:     cmd.String(specFlagName),
+				ReportFilePaths: cmd.StringSlice(reportFlagName),
+				Format:          cmd.String(formatFlagName),
+				JunitFilePath:   cmd.String(reportJUNITFlagName),
+				HtmlFilePath:    cmd.String(reportHTMLFlagName),
+				JsonFilePath:    cmd.String(reportJSONFlagName),
 			}.Execute()
 		},
 	}

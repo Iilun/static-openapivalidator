@@ -7,5 +7,5 @@ import (
 
 // Implement parser to parse a file
 type Parser interface {
-	Parse(report []byte, router routers.Router) ([]validator.TestResult, error)
+	Parse(reportFilePaths []string, router routers.Router) ([]validator.TestResult, error)
 }
