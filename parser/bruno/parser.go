@@ -66,7 +66,10 @@ func brunoToOpenAPI(result Result, router routers.Router) (validator.TestResult,
 }
 
 func formatId(filename string) string {
-	return strings.TrimSuffix(filename, ".bru")
+	filename = strings.TrimSuffix(filename, ".bru")
+	filename = strings.TrimSuffix(filename, "-muted-")
+	filename = strings.TrimSpace(filename)
+	return filename
 }
 
 func translateRequest(brunoRequest Request, router routers.Router) (*validator.TestRequest, error) {
