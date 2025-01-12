@@ -96,7 +96,7 @@
                 >
                 </n-statistic>
             </n-alert>
-            <n-alert :type="summaryIgnored ? 'info' : 'success'" >
+            <n-alert :type="summaryIgnored ? 'info' : 'success'">
                 <n-statistic
                         label="Total Checks Ignored"
                         :value="summaryIgnored"
@@ -148,7 +148,10 @@
                     :bordered="false"
             >
                 <template #header>
-                    {{group}} -  {{ totalIgnored === total ? "Skipped" : (totalPassed +" / " + total + " Passed " + ( hasError ? " - Error" : "" )) }}
+                    {{group}} -
+                    {{
+                        totalIgnored === total ? "Skipped" : (totalPassed + " / " + total + " Passed " + (hasError ? " - Error" : ""))
+                    }}
                 </template>
             </n-alert>
         </template>
@@ -192,7 +195,7 @@
                     :bordered="false"
             >
                 <template #header>
-                    {{name}} - {{hasError ? "Failed" : hasWarning ? 'Warn' : hasIgnored  ? 'Skipped': "Passed" }}
+                    {{name}} - {{hasError ? "Failed" : hasWarning ? 'Warn' : hasIgnored ? 'Skipped' : "Passed" }}
                     <n-tooltip>
                         <template #trigger>
                             <x-copy-button
