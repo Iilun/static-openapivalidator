@@ -68,14 +68,14 @@ func translateResults(results []Result, router routers.Router, config validator.
 
 func addResultToArray(array []validator.TestResult, res validator.TestResult, config validator.Config) []validator.TestResult {
 	// Check if request is ignored
-	for _, path := range config.BannedRequests {
+	for _, path := range config.IgnoredRequests {
 		if path.Match(res.Id) {
 			res.Request.Ignored = true
 		}
 	}
 
 	// Check if request is ignored
-	for _, path := range config.BannedResponses {
+	for _, path := range config.IgnoredResponses {
 		if path.Match(res.Id) {
 			res.Response.Ignored = true
 		}
@@ -155,7 +155,7 @@ func translateRequest(brunoRequest Request, router routers.Router, config valida
 	}
 
 	ignored := false
-	for _, path := range config.BannedRoutes {
+	for _, path := range config.IgnoredRoutes {
 		if path.Match(parsedUrl.Path) {
 			ignored = true
 		}

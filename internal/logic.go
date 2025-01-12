@@ -68,10 +68,10 @@ func (params *Params) loadConfig() error {
 		}
 
 		params.config = validator.Config{
-			BannedRequests:  bannedRequests,
-			BannedResponses: bannedResponses,
-			BannedRoutes:    bannedRoutes,
-			IgnoreServers:   config.Ignore.Servers,
+			IgnoredRequests:  bannedRequests,
+			IgnoredResponses: bannedResponses,
+			IgnoredRoutes:    bannedRoutes,
+			IgnoreServers:    config.Ignore.Servers,
 		}
 	}
 	return nil

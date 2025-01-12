@@ -34,6 +34,26 @@ static-openapivalidator --spec <openapi file> --report <report containing API re
 | report-junit | -       | Path to output a JUNIT report to                                 |
 | help         | h       | Display help information                                         |
 
+### Configuration file
+
+A configuration file path can be given through the `CONFIG_FILE` environment variable.
+
+This YAML file allows for routes/requests/responses exclusion as well as some more advanced configuration options.
+
+```yaml
+ignore:
+  # Ignore the servers section from the OpenAPI spec, allowing for hosts not given in the OpenAPI to match the route anyway
+  servers: true
+  # A list of requests name (can be extracted from html report) where the result should be ignored
+  requests:
+   - "glob for test name - depends on parser"
+  # A list of responses name (can be extracted from html report) where the result should be ignored
+  responses:
+    - "glob for test name - depends on parser"
+  # A list of relative routes where the result should be ignored
+  routes:
+   - "glob for relative path"
+```
 
 
 ## Supported formats

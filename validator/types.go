@@ -7,10 +7,10 @@ import (
 )
 
 type Config struct {
-	BannedRequests  []glob.Glob
-	BannedResponses []glob.Glob
-	BannedRoutes    []glob.Glob
-	IgnoreServers   bool
+	IgnoredRequests  []glob.Glob
+	IgnoredResponses []glob.Glob
+	IgnoredRoutes    []glob.Glob
+	IgnoreServers    bool
 }
 
 type TestResult struct {

@@ -18,16 +18,13 @@ type Params struct {
 }
 
 type Config struct {
-	Banned Banned `yaml:"banned"`
+	Banned Ignore `yaml:"banned"`
 	Ignore Ignore `yaml:"ignore"`
 }
 
-type Banned struct {
+type Ignore struct {
 	Requests  []string `yaml:"requests"`
 	Responses []string `yaml:"responses"`
 	Routes    []string `yaml:"routes"`
-}
-
-type Ignore struct {
-	Servers bool `yaml:"servers"`
+	Servers   bool     `yaml:"servers"`
 }
