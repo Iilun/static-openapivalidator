@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"static-openapivalidator/validator"
@@ -16,11 +18,11 @@ import (
 
 type Parser struct{}
 
-func (p Parser) Parse(reportFilePaths []string, router routers.Router) ([]validator.TestResult, error) {
-	var reports []Report
+func (p Parser) Parse(reportFilePaths []string, router routers.Router, config validator.Config) ([]validator.TestResult, error) {
 	var results []Result
 
 	for _, path := range reportFilePaths {
+		var reports []Report
 		reportBytes, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -28,11 +30,11 @@ func (p Parser) Parse(reportFilePaths []string, router routers.Router) ([]valida
 
 		err = json.Unmarshal(reportBytes, &reports)
 		if err != nil {
-			return nil, err
+			return nil, errors.New(path + ": " + err.Error())
 		}
 
 		if len(reports) == 0 {
-			return nil, errors.New("no report in report file")
+			return nil, errors.New(path + ": no report in report file")
 		}
 
 		for i := range reports {
@@ -45,31 +47,54 @@ func (p Parser) Parse(reportFilePaths []string, router routers.Router) ([]valida
 		}
 	}
 
-	translated, err := translateResults(results, router)
+	translated, err := translateResults(results, router, config)
 	if err != nil {
 		return nil, err
 	}
 	return translated, nil
 }
 
-func translateResults(results []Result, router routers.Router) ([]validator.TestResult, error) {
+func translateResults(results []Result, router routers.Router, config validator.Config) ([]validator.TestResult, error) {
 	var final []validator.TestResult
 	for i := range results {
-		res, err := brunoToOpenAPI(results[i], router)
+		res, err := brunoToOpenAPI(results[i], router, config)
 		if err != nil {
 			return nil, err
 		}
-		final = append(final, res)
+		final = addResultToArray(final, res, config)
 	}
 	return final, nil
 }
 
-func brunoToOpenAPI(result Result, router routers.Router) (validator.TestResult, error) {
-	request, err := translateRequest(result.Request, router)
+func addResultToArray(array []validator.TestResult, res validator.TestResult, config validator.Config) []validator.TestResult {
+	// Check if request is ignored
+	for _, path := range config.BannedRequests {
+		if path.Match(res.Id) {
+			res.Request.Ignored = true
+		}
+	}
+
+	// Check if request is ignored
+	for _, path := range config.BannedResponses {
+		if path.Match(res.Id) {
+			res.Response.Ignored = true
+		}
+	}
+
+	// Route was ignored or both were ignored
+	if res.Request.Ignored && res.Response.Ignored {
+		return array
+	}
+
+	return append(array, res)
+}
+
+func brunoToOpenAPI(result Result, router routers.Router, config validator.Config) (validator.TestResult, error) {
+	request, err := translateRequest(result.Request, router, config)
 	if err != nil {
 		return validator.TestResult{}, err
 	}
-	response, err := translateResponse(result.Response, request.RequestValidationInput)
+	response, err := translateResponse(result.Response, request)
 	if err != nil {
 		return validator.TestResult{}, err
 	}
@@ -90,16 +115,16 @@ func formatId(fileOrigin, filename string) string {
 	return filename
 }
 
-func getHeaderValue(header string, headers map[string]string) string {
+func getHeaderValue(header string, headers map[string]any) string {
 	for key, value := range headers {
 		if strings.EqualFold(key, header) {
-			return value
+			return fmt.Sprintf("%s", value)
 		}
 	}
 	return ""
 }
 
-func translateRequest(brunoRequest Request, router routers.Router) (*validator.TestRequest, error) {
+func translateRequest(brunoRequest Request, router routers.Router, config validator.Config) (*validator.TestRequest, error) {
 	// Translate request
 	var requestBody io.Reader
 	var prettyJSON bytes.Buffer
@@ -118,20 +143,46 @@ func translateRequest(brunoRequest Request, router routers.Router) (*validator.T
 		}
 	}
 
-	httpReq, err := http.NewRequest(brunoRequest.Method, brunoRequest.Url, requestBody)
+	// Bruno does not escape URLs
+	splitted := strings.Split(strings.Split(brunoRequest.Url, "?")[0], "/")
+	for i := range splitted {
+		splitted[i] = url.PathEscape(splitted[i])
+	}
+
+	parsedUrl, err := url.Parse(strings.Join(splitted, "/"))
+	if err != nil {
+		return nil, err
+	}
+
+	ignored := false
+	for _, path := range config.BannedRoutes {
+		if path.Match(parsedUrl.Path) {
+			ignored = true
+		}
+	}
+
+	httpReq, err := http.NewRequest(brunoRequest.Method, parsedUrl.String(), requestBody)
 	if err != nil {
 		return nil, err
 	}
 	// Set headers
 	for header, value := range brunoRequest.Headers {
-		httpReq.Header.Set(header, value)
+		httpReq.Header.Set(header, fmt.Sprintf("%s", value))
 	}
+
 	route, pathParams, err := router.FindRoute(httpReq)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, routers.ErrPathNotFound) {
+			parsingError = fmt.Sprintf("could not find route for %s %s: %v", brunoRequest.Method, parsedUrl.String(), err)
+		} else if errors.Is(err, routers.ErrMethodNotAllowed) {
+			parsingError = fmt.Sprintf("bad method for %s %s: %v", brunoRequest.Method, parsedUrl.String(), err)
+		} else {
+			return nil, err
+		}
+	} else {
+		// Disabling security checks
+		route.Spec.Security = nil
 	}
-	// Disabling security checks
-	route.Spec.Security = nil
 
 	request := validator.TestRequest{
 		RequestValidationInput: &openapi3filter.RequestValidationInput{
@@ -141,15 +192,16 @@ func translateRequest(brunoRequest Request, router routers.Router) (*validator.T
 		},
 		Body:         prettyJSON.String(),
 		ParsingError: parsingError,
+		Ignored:      ignored,
 	}
 
 	return &request, nil
 }
 
-func translateResponse(brunoResponse Response, request *openapi3filter.RequestValidationInput) (*validator.TestResponse, error) {
+func translateResponse(brunoResponse Response, request *validator.TestRequest) (*validator.TestResponse, error) {
 	headers := http.Header{}
 	for header, value := range brunoResponse.Headers {
-		headers.Set(header, value)
+		headers.Set(header, fmt.Sprintf("%s", value))
 	}
 	var bodyReader io.ReadCloser
 	var prettyJSON bytes.Buffer
@@ -159,13 +211,19 @@ func translateResponse(brunoResponse Response, request *openapi3filter.RequestVa
 			return nil, err
 		}
 	}
-
-	return &validator.TestResponse{ResponseValidationInput: &openapi3filter.ResponseValidationInput{
-		RequestValidationInput: request,
-		Status:                 brunoResponse.Status,
-		Header:                 headers,
-		Body:                   bodyReader,
-	},
-		Body: prettyJSON.String(),
+	var parsingError string
+	if request.Route == nil {
+		parsingError = "no route found"
+	}
+	return &validator.TestResponse{
+		ResponseValidationInput: &openapi3filter.ResponseValidationInput{
+			RequestValidationInput: request.RequestValidationInput,
+			Status:                 brunoResponse.Status,
+			Header:                 headers,
+			Body:                   bodyReader,
+		},
+		Body:         prettyJSON.String(),
+		ParsingError: parsingError,
+		Ignored:      request.Ignored,
 	}, nil
 }

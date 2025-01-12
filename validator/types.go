@@ -3,7 +3,15 @@ package validator
 import (
 	"encoding/json"
 	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/gobwas/glob"
 )
+
+type Config struct {
+	BannedRequests  []glob.Glob
+	BannedResponses []glob.Glob
+	BannedRoutes    []glob.Glob
+	IgnoreServers   bool
+}
 
 type TestResult struct {
 	AdditionalInfos map[string]string
@@ -16,12 +24,14 @@ type TestRequest struct {
 	*openapi3filter.RequestValidationInput
 	Body         string
 	ParsingError string
+	Ignored      bool
 }
 
 type TestResponse struct {
 	*openapi3filter.ResponseValidationInput
 	Body         string
 	ParsingError string
+	Ignored      bool
 }
 
 type ValidationResult interface {
@@ -47,6 +57,7 @@ type RequestValidationResult struct {
 	Errors       []ValidationError
 	Status       string
 	Body         string
+	Method       string
 	Headers      map[string][]string
 }
 
@@ -92,6 +103,7 @@ func (r RequestValidationResult) MarshalJSON() ([]byte, error) {
 		Type:         r.GetType(),
 		Body:         r.Body,
 		Headers:      r.Headers,
+		Method:       r.Method,
 	})
 }
 
@@ -103,6 +115,7 @@ type ResponseValidationResult struct {
 	Status       string
 	Body         string
 	Headers      map[string][]string
+	Code         int
 }
 
 func (r ResponseValidationResult) GetType() string {
@@ -147,6 +160,7 @@ func (r ResponseValidationResult) MarshalJSON() ([]byte, error) {
 		Type:         r.GetType(),
 		Body:         r.Body,
 		Headers:      r.Headers,
+		Code:         r.Code,
 	})
 }
 
@@ -159,4 +173,6 @@ type jsonValidationResult struct {
 	Type         string              `json:"type"`
 	Body         string              `json:"body"`
 	Headers      map[string][]string `json:"headers"`
+	Method       string              `json:"method"`
+	Code         int                 `json:"code,omitempty"`
 }

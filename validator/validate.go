@@ -28,19 +28,24 @@ func Validate(results []TestResult, ctx context.Context) ([]ValidationResult, er
 
 // ctx contains the openapi spec
 func validateResult(result TestResult, ctx context.Context) ([]ValidationResult, error) {
+	var results []ValidationResult
+
 	requestResult, err := requestValidationResult(result, ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error validating request: " + err.Error())
+	}
+	if requestResult != nil {
+		results = append(results, requestResult)
 	}
 
 	responseResult, err := responseValidationResult(result, ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error validating response: " + err.Error())
 	}
-
-	return []ValidationResult{
-		requestResult, responseResult,
-	}, nil
+	if responseResult != nil {
+		results = append(results, responseResult)
+	}
+	return results, nil
 }
 
 func computeError(err error) (string, []ValidationError, error) {
@@ -72,7 +77,7 @@ func computeErrorFields(multiError []error) (string, []ValidationError, error) {
 			})
 		} else {
 			// Do not erase a more important error
-			if errAsString == "" {
+			if errAsString == "" && multiError[i] != nil {
 				errAsString = multiError[i].Error()
 			}
 		}
@@ -116,6 +121,10 @@ func computeResultFields(validationError error) (string, string, []ValidationErr
 }
 
 func requestValidationResult(result TestResult, ctx context.Context) (*RequestValidationResult, error) {
+	if result.Request.Ignored {
+		return nil, nil
+	}
+
 	var status, errAsString string
 	var validationErrors []ValidationError
 	var err error
@@ -137,10 +146,15 @@ func requestValidationResult(result TestResult, ctx context.Context) (*RequestVa
 		Status:       status,
 		Body:         result.Request.Body,
 		Headers:      result.Request.Request.Header,
+		Method:       result.Request.Request.Method,
 	}, nil
 }
 
 func responseValidationResult(result TestResult, ctx context.Context) (*ResponseValidationResult, error) {
+	if result.Response.Ignored {
+		return nil, nil
+	}
+
 	var status, errAsString string
 	var validationErrors []ValidationError
 	var err error
@@ -161,6 +175,7 @@ func responseValidationResult(result TestResult, ctx context.Context) (*Response
 		ErrorSummary: errAsString,
 		Errors:       validationErrors,
 		Status:       status,
+		Code:         result.Response.Status,
 		Body:         result.Response.Body,
 		Headers:      result.Response.ResponseValidationInput.Header,
 	}, nil

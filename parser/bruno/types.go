@@ -16,16 +16,16 @@ type Test struct {
 }
 
 type Request struct {
-	Method  string            `json:"method"`
-	Url     string            `json:"url"`
-	Headers map[string]string `json:"headers"`
-	Body    CustomString      `json:"data"`
+	Method  string         `json:"method"`
+	Url     string         `json:"url"`
+	Headers map[string]any `json:"headers"`
+	Body    CustomString   `json:"data"`
 }
 
 type Response struct {
-	Status  int               `json:"status"`
-	Headers map[string]string `json:"headers"`
-	Body    CustomString      `json:"data"`
+	Status  int            `json:"status"`
+	Headers map[string]any `json:"headers"`
+	Body    CustomString   `json:"data"`
 }
 
 type CustomString string

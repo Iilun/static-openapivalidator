@@ -1,12 +1,14 @@
 package internal
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
 	struct_validator "github.com/go-playground/validator/v10"
+	"github.com/gobwas/glob"
+	"gopkg.in/yaml.v3"
+	"os"
 	test_report "static-openapivalidator/parser"
 	"static-openapivalidator/parser/bruno"
 	"static-openapivalidator/reports"
@@ -16,21 +18,16 @@ import (
 	"static-openapivalidator/validator"
 )
 
-type Params struct {
-	Ctx             context.Context
-	ApiFilePath     string   `validate:"required,file"`
-	ReportFilePaths []string `validate:"gt=0,dive,file"`
-	Format          string   `validate:"required"`
-	JunitFilePath   string   `validate:"omitempty,filepath"`
-	HtmlFilePath    string   `validate:"omitempty,filepath"`
-	JsonFilePath    string   `validate:"omitempty,filepath"`
-}
-
-func (params Params) Execute() error {
+func (params *Params) Execute() error {
 	err := struct_validator.New().Struct(params)
 	if err != nil {
 		// TODO: improve error messages
 		return errors.New("invalid input: " + err.Error())
+	}
+
+	err = params.loadConfig()
+	if err != nil {
+		return err
 	}
 
 	results, err := params.checkResponses()
@@ -42,7 +39,57 @@ func (params Params) Execute() error {
 	return params.logResults(results)
 }
 
-func (params Params) checkResponses() ([]validator.ValidationResult, error) {
+func (params *Params) loadConfig() error {
+	if params.ConfigFilePath != "" {
+		yamlBytes, err := os.ReadFile(params.ConfigFilePath)
+		if err != nil {
+			return err
+		}
+
+		var config Config
+		err = yaml.Unmarshal(yamlBytes, &config)
+		if err != nil {
+			return err
+		}
+		// Parse globs
+		var bannedResponses, bannedRequests, bannedRoutes []glob.Glob
+
+		bannedResponses, err = compileGlobs(config.Banned.Responses)
+		if err != nil {
+			return err
+		}
+		bannedRequests, err = compileGlobs(config.Banned.Requests)
+		if err != nil {
+			return err
+		}
+		bannedRoutes, err = compileGlobs(config.Banned.Routes)
+		if err != nil {
+			return err
+		}
+
+		params.config = validator.Config{
+			BannedRequests:  bannedRequests,
+			BannedResponses: bannedResponses,
+			BannedRoutes:    bannedRoutes,
+			IgnoreServers:   config.Ignore.Servers,
+		}
+	}
+	return nil
+}
+
+func compileGlobs(array []string) ([]glob.Glob, error) {
+	var result []glob.Glob
+	for _, path := range array {
+		elem, err := glob.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, elem)
+	}
+	return result, nil
+}
+
+func (params *Params) checkResponses() ([]validator.ValidationResult, error) {
 	// Load open api ref
 	loader := &openapi3.Loader{Context: params.Ctx, IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(params.ApiFilePath)
@@ -56,6 +103,11 @@ func (params Params) checkResponses() ([]validator.ValidationResult, error) {
 		return nil, errors.New("openapi validation: " + err.Error())
 	}
 
+	if params.config.IgnoreServers {
+		// Ignoring servers from spec so requests on any host matches
+		doc.Servers = openapi3.Servers{}
+	}
+
 	router, err := gorillamux.NewRouter(doc)
 	if err != nil {
 		return nil, err
@@ -67,7 +119,7 @@ func (params Params) checkResponses() ([]validator.ValidationResult, error) {
 		return nil, err
 	}
 
-	results, err := parser.Parse(params.ReportFilePaths, router)
+	results, err := parser.Parse(params.ReportFilePaths, router, params.config)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +128,7 @@ func (params Params) checkResponses() ([]validator.ValidationResult, error) {
 	return validator.Validate(results, params.Ctx)
 }
 
-func (params Params) logResults(results []validator.ValidationResult) error {
+func (params *Params) logResults(results []validator.ValidationResult) error {
 	var reporters []reports.Reporter
 
 	if params.HtmlFilePath != "" {
