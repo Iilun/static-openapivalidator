@@ -18,7 +18,6 @@ type Params struct {
 }
 
 type Config struct {
-	Banned Ignore `yaml:"banned"`
 	Ignore Ignore `yaml:"ignore"`
 }
 

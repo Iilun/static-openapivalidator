@@ -11,6 +11,7 @@ import (
 const (
 	Failure = "failure"
 	Warning = "warning"
+	Ignored = "ignored"
 	Success = "success"
 )
 
@@ -121,20 +122,21 @@ func computeResultFields(validationError error) (string, string, []ValidationErr
 }
 
 func requestValidationResult(result TestResult, ctx context.Context) (*RequestValidationResult, error) {
-	if result.Request.Ignored {
-		return nil, nil
-	}
-
 	var status, errAsString string
 	var validationErrors []ValidationError
 	var err error
-	if result.Request.ParsingError != "" {
-		status = Warning
-		errAsString = result.Request.ParsingError
+
+	if result.Request.Ignored {
+		status = Ignored
 	} else {
-		status, errAsString, validationErrors, err = computeResultFields(openapi3filter.ValidateRequest(ctx, result.Request.RequestValidationInput))
-		if err != nil {
-			return nil, err
+		if result.Request.ParsingError != "" {
+			status = Warning
+			errAsString = result.Request.ParsingError
+		} else {
+			status, errAsString, validationErrors, err = computeResultFields(openapi3filter.ValidateRequest(ctx, result.Request.RequestValidationInput))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -151,21 +153,21 @@ func requestValidationResult(result TestResult, ctx context.Context) (*RequestVa
 }
 
 func responseValidationResult(result TestResult, ctx context.Context) (*ResponseValidationResult, error) {
-	if result.Response.Ignored {
-		return nil, nil
-	}
-
 	var status, errAsString string
 	var validationErrors []ValidationError
 	var err error
 
-	if result.Response.ParsingError != "" {
-		status = Warning
-		errAsString = result.Response.ParsingError
+	if result.Response.Ignored {
+		status = Ignored
 	} else {
-		status, errAsString, validationErrors, err = computeResultFields(openapi3filter.ValidateResponse(ctx, result.Response.ResponseValidationInput))
-		if err != nil {
-			return nil, err
+		if result.Response.ParsingError != "" {
+			status = Warning
+			errAsString = result.Response.ParsingError
+		} else {
+			status, errAsString, validationErrors, err = computeResultFields(openapi3filter.ValidateResponse(ctx, result.Response.ResponseValidationInput))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

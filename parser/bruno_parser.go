@@ -1,4 +1,4 @@
-package bruno
+package test_report
 
 import (
 	"bytes"
@@ -16,13 +16,13 @@ import (
 	"strings"
 )
 
-type Parser struct{}
+type BrunoParser struct{}
 
-func (p Parser) Parse(reportFilePaths []string, router routers.Router, config validator.Config) ([]validator.TestResult, error) {
-	var results []Result
+func (p BrunoParser) Parse(reportFilePaths []string, router routers.Router, config validator.Config) ([]validator.TestResult, error) {
+	var results []BrunoResult
 
 	for _, path := range reportFilePaths {
-		var reports []Report
+		var reports []BrunoReport
 		reportBytes, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -54,7 +54,7 @@ func (p Parser) Parse(reportFilePaths []string, router routers.Router, config va
 	return translated, nil
 }
 
-func translateResults(results []Result, router routers.Router, config validator.Config) ([]validator.TestResult, error) {
+func translateResults(results []BrunoResult, router routers.Router, config validator.Config) ([]validator.TestResult, error) {
 	var final []validator.TestResult
 	for i := range results {
 		res, err := brunoToOpenAPI(results[i], router, config)
@@ -66,30 +66,7 @@ func translateResults(results []Result, router routers.Router, config validator.
 	return final, nil
 }
 
-func addResultToArray(array []validator.TestResult, res validator.TestResult, config validator.Config) []validator.TestResult {
-	// Check if request is ignored
-	for _, path := range config.IgnoredRequests {
-		if path.Match(res.Id) {
-			res.Request.Ignored = true
-		}
-	}
-
-	// Check if request is ignored
-	for _, path := range config.IgnoredResponses {
-		if path.Match(res.Id) {
-			res.Response.Ignored = true
-		}
-	}
-
-	// Route was ignored or both were ignored
-	if res.Request.Ignored && res.Response.Ignored {
-		return array
-	}
-
-	return append(array, res)
-}
-
-func brunoToOpenAPI(result Result, router routers.Router, config validator.Config) (validator.TestResult, error) {
+func brunoToOpenAPI(result BrunoResult, router routers.Router, config validator.Config) (validator.TestResult, error) {
 	request, err := translateRequest(result.Request, router, config)
 	if err != nil {
 		return validator.TestResult{}, err
@@ -124,7 +101,7 @@ func getHeaderValue(header string, headers map[string]any) string {
 	return ""
 }
 
-func translateRequest(brunoRequest Request, router routers.Router, config validator.Config) (*validator.TestRequest, error) {
+func translateRequest(brunoRequest BrunoRequest, router routers.Router, config validator.Config) (*validator.TestRequest, error) {
 	// Translate request
 	var requestBody io.Reader
 	var prettyJSON bytes.Buffer
@@ -198,7 +175,7 @@ func translateRequest(brunoRequest Request, router routers.Router, config valida
 	return &request, nil
 }
 
-func translateResponse(brunoResponse Response, request *validator.TestRequest) (*validator.TestResponse, error) {
+func translateResponse(brunoResponse BrunoResponse, request *validator.TestRequest) (*validator.TestResponse, error) {
 	headers := http.Header{}
 	for header, value := range brunoResponse.Headers {
 		headers.Set(header, fmt.Sprintf("%s", value))

@@ -6,7 +6,7 @@ import (
 )
 
 func GenerateReport(results []validator.ValidationResult) (Report, error) {
-	var totalRequests, passedRequests, warnRequests, totalResponses, warnResponses, passedResponses int
+	var totalRequests, passedRequests, warnRequests, ignoredRequests, totalResponses, warnResponses, passedResponses, ignoredResponses int
 	for i := range results {
 		switch v := results[i].(type) {
 		case *validator.RequestValidationResult:
@@ -15,6 +15,8 @@ func GenerateReport(results []validator.ValidationResult) (Report, error) {
 				passedRequests++
 			} else if v.Status == validator.Warning {
 				warnRequests++
+			} else if v.Status == validator.Ignored {
+				ignoredRequests++
 			}
 		case *validator.ResponseValidationResult:
 			totalResponses++
@@ -22,22 +24,25 @@ func GenerateReport(results []validator.ValidationResult) (Report, error) {
 				passedResponses++
 			} else if v.Status == validator.Warning {
 				warnResponses++
+			} else if v.Status == validator.Ignored {
+				ignoredResponses++
 			}
 		default:
 			return Report{}, errors.New("got unknown type")
 		}
 	}
-
 	return Report{
 		Summary: Summary{
-			TotalRequests:   totalRequests,
-			PassedRequests:  passedRequests,
-			WarnRequests:    warnRequests,
-			FailedRequests:  totalRequests - passedRequests - warnRequests,
-			TotalResponses:  totalResponses,
-			PassedResponses: passedResponses,
-			WarnResponses:   warnResponses,
-			FailedResponses: totalResponses - passedResponses - warnResponses,
+			TotalRequests:    totalRequests,
+			PassedRequests:   passedRequests,
+			WarnRequests:     warnRequests,
+			IgnoredRequests:  ignoredRequests,
+			FailedRequests:   totalRequests - passedRequests - warnRequests - ignoredRequests,
+			TotalResponses:   totalResponses,
+			PassedResponses:  passedResponses,
+			WarnResponses:    warnResponses,
+			IgnoredResponses: ignoredResponses,
+			FailedResponses:  totalResponses - passedResponses - warnResponses - ignoredResponses,
 		},
 		Results: results,
 	}, nil

@@ -10,7 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	test_report "static-openapivalidator/parser"
-	"static-openapivalidator/parser/bruno"
 	"static-openapivalidator/reports"
 	"static-openapivalidator/reports/html"
 	"static-openapivalidator/reports/json"
@@ -54,15 +53,15 @@ func (params *Params) loadConfig() error {
 		// Parse globs
 		var bannedResponses, bannedRequests, bannedRoutes []glob.Glob
 
-		bannedResponses, err = compileGlobs(config.Banned.Responses)
+		bannedResponses, err = compileGlobs(config.Ignore.Responses)
 		if err != nil {
 			return err
 		}
-		bannedRequests, err = compileGlobs(config.Banned.Requests)
+		bannedRequests, err = compileGlobs(config.Ignore.Requests)
 		if err != nil {
 			return err
 		}
-		bannedRoutes, err = compileGlobs(config.Banned.Routes)
+		bannedRoutes, err = compileGlobs(config.Ignore.Routes)
 		if err != nil {
 			return err
 		}
@@ -162,7 +161,7 @@ func (params *Params) logResults(results []validator.ValidationResult) error {
 func getParser(format string) (test_report.Parser, error) {
 	switch format {
 	case "bruno":
-		return bruno.Parser{}, nil
+		return test_report.BrunoParser{}, nil
 	default:
 		return nil, fmt.Errorf("Format %s not supported", format)
 	}

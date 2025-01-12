@@ -8,12 +8,14 @@ type Report struct {
 }
 
 type Summary struct {
-	TotalRequests   int `json:"totalRequests"`
-	PassedRequests  int `json:"passedRequests"`
-	WarnRequests    int `json:"warnRequests"`
-	FailedRequests  int `json:"failedRequests"`
-	TotalResponses  int `json:"totalResponses"`
-	PassedResponses int `json:"passedResponses"`
-	WarnResponses   int `json:"warnResponses"`
-	FailedResponses int `json:"failedResponses"`
+	TotalRequests    int `json:"totalRequests"`
+	PassedRequests   int `json:"passedRequests"`
+	WarnRequests     int `json:"warnRequests"`
+	FailedRequests   int `json:"failedRequests"`
+	IgnoredRequests  int `json:"ignoredRequests"`
+	TotalResponses   int `json:"totalResponses"`
+	PassedResponses  int `json:"passedResponses"`
+	WarnResponses    int `json:"warnResponses"`
+	FailedResponses  int `json:"failedResponses"`
+	IgnoredResponses int `json:"ignoredResponses"`
 }

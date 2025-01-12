@@ -1,33 +1,35 @@
-package bruno
+package test_report
 
-type Report struct {
-	Results []Result `json:"results"`
+type BrunoReport struct {
+	Results []BrunoResult `json:"results"`
 }
 
-type Result struct {
+type BrunoResult struct {
 	FileOrigin string
-	Test       Test     `json:"test"`
-	Request    Request  `json:"request"`
-	Response   Response `json:"response"`
+	Test       BrunoTest     `json:"test"`
+	Request    BrunoRequest  `json:"request"`
+	Response   BrunoResponse `json:"response"`
 }
 
-type Test struct {
+type BrunoTest struct {
 	Filename string `json:"filename"`
 }
 
-type Request struct {
+type BrunoRequest struct {
 	Method  string         `json:"method"`
 	Url     string         `json:"url"`
 	Headers map[string]any `json:"headers"`
 	Body    CustomString   `json:"data"`
 }
 
-type Response struct {
+type BrunoResponse struct {
 	Status  int            `json:"status"`
 	Headers map[string]any `json:"headers"`
 	Body    CustomString   `json:"data"`
 }
 
+// CustomString unmarshals all the value of the key as string
+// In the case of Bruno, bodies are stored as json
 type CustomString string
 
 func (s *CustomString) UnmarshalJSON(data []byte) error {

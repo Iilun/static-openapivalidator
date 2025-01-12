@@ -53,7 +53,6 @@ func (r Reporter) Generate(report reports.Report) error {
 }
 
 func createTestcaseForTest(url string, test validator.ValidationResult) junit_xml.Testcase {
-
 	testName := fmt.Sprintf("%s - %s", test.GetTestId(), test.GetType())
 
 	tc := junit_xml.Testcase{
@@ -65,6 +64,10 @@ func createTestcaseForTest(url string, test validator.ValidationResult) junit_xm
 		tc.Failure = &junit_xml.Result{
 			Message: "Failed",
 			Data:    formatOutput(test),
+		}
+	case validator.Ignored:
+		tc.Skipped = &junit_xml.Result{
+			Message: "Skipped",
 		}
 	default:
 		tc.SystemOut = &junit_xml.Output{Data: formatOutput(test)}
