@@ -35,7 +35,17 @@ func (params *Params) Execute() error {
 		return err
 	}
 
-	return params.logResults(results)
+	summary, err := params.logResults(results)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(*summary)
+	if summary.FailedResponses > 0 || summary.FailedRequests > 0 {
+		return errors.New("run failed")
+	}
+	return nil
 }
 
 func (params *Params) loadConfig() error {
@@ -127,7 +137,7 @@ func (params *Params) checkResponses() ([]validator.ValidationResult, error) {
 	return validator.Validate(results, params.Ctx)
 }
 
-func (params *Params) logResults(results []validator.ValidationResult) error {
+func (params *Params) logResults(results []validator.ValidationResult) (*reports.Summary, error) {
 	var reporters []reports.Reporter
 
 	if params.HtmlFilePath != "" {
@@ -142,27 +152,27 @@ func (params *Params) logResults(results []validator.ValidationResult) error {
 		reporters = append(reporters, junit.NewReporter(params.JunitFilePath))
 	}
 
-	if len(reporters) > 0 {
-		report, err := reports.GenerateReport(results)
+	report, err := reports.GenerateReport(results)
+	if err != nil {
+		return nil, err
+	}
+	for i := range reporters {
+		err = reporters[i].Generate(report)
 		if err != nil {
-			return err
-		}
-		for i := range reporters {
-			err = reporters[i].Generate(report)
-			if err != nil {
-				return err
-			}
+			return nil, err
 		}
 	}
 
-	return nil
+	return &report.Summary, nil
 }
 
 func getParser(format string) (test_report.Parser, error) {
 	switch format {
 	case "bruno":
 		return test_report.BrunoParser{}, nil
+	case "postman":
+		return test_report.PostmanParser{}, nil
 	default:
-		return nil, fmt.Errorf("Format %s not supported", format)
+		return nil, fmt.Errorf("format %s not supported", format)
 	}
 }

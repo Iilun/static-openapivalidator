@@ -1,6 +1,9 @@
 package reports
 
-import "static-openapivalidator/validator"
+import (
+	"fmt"
+	"static-openapivalidator/validator"
+)
 
 type Report struct {
 	Summary Summary                      `json:"summary"`
@@ -18,4 +21,27 @@ type Summary struct {
 	WarnResponses    int `json:"warnResponses"`
 	FailedResponses  int `json:"failedResponses"`
 	IgnoredResponses int `json:"ignoredResponses"`
+}
+
+func (s Summary) String() string {
+	return fmt.Sprintf(`Total requests: %d
+Passed requests: %d
+Warn requests: %d
+Failed requests: %d
+Ignored requests: %d
+Total responses: %d
+Passed respones: %d
+Warn responses: %d
+Failed reponses: %d
+Ignored responses: %d`,
+		s.TotalRequests,
+		s.PassedRequests,
+		s.WarnRequests,
+		s.FailedRequests,
+		s.IgnoredRequests,
+		s.TotalResponses,
+		s.PassedResponses,
+		s.WarnResponses,
+		s.FailedResponses,
+		s.IgnoredResponses)
 }

@@ -171,8 +171,8 @@ type jsonValidationResult struct {
 	Errors       []ValidationError   `json:"errors,omitempty"`
 	Status       string              `json:"status"`
 	Type         string              `json:"type"`
-	Body         string              `json:"body"`
-	Headers      map[string][]string `json:"headers"`
-	Method       string              `json:"method"`
+	Body         string              `json:"body,omitempty"`
+	Headers      map[string][]string `json:"headers,omitempty"`
+	Method       string              `json:"method,omitempty"`
 	Code         int                 `json:"code,omitempty"`
 }

@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	altsrc "github.com/urfave/cli-altsrc/v3"
 	"github.com/urfave/cli/v3"
-	"log"
 	"os"
 	"static-openapivalidator/internal"
 )
@@ -90,6 +90,7 @@ func main() {
 	}
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 }

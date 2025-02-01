@@ -68,4 +68,16 @@ Use with the file produced by the `--reporter-json` option of bru.
 
 ### Postman
 
-Coming soon
+Flag value: `postman`
+
+Use with the file produced by the `-r json --reporter-json-export` option of newman.
+
+## Troubleshooting
+
+## Could not find route
+
+If all your requests end up with the following error: 
+
+    could not find route for <route>: no matching operation was found
+
+Make sure to enable the option `ignore.servers: true` in the [configuration file](#configuration-file)

@@ -100,13 +100,21 @@ func computeResultFields(validationError error) (string, string, []ValidationErr
 		responseErr := new(openapi3filter.ResponseError)
 		requestErr := new(openapi3filter.RequestError)
 		if errors.As(validationError, &responseErr) {
-			errorTitle = responseErr.Reason
+			if responseErr.Reason != "" {
+				errorTitle = responseErr.Reason
+			} else {
+				errorTitle = validationError.Error()
+			}
 			_, validationErrors, err = computeError(responseErr.Err)
 			if err != nil {
 				return "", "", nil, err
 			}
 		} else if errors.As(validationError, &requestErr) {
-			errorTitle = requestErr.Reason
+			if requestErr.Reason != "" {
+				errorTitle = requestErr.Reason
+			} else {
+				errorTitle = validationError.Error()
+			}
 			_, validationErrors, err = computeError(requestErr.Err)
 			if err != nil {
 				return "", "", nil, err
@@ -116,6 +124,9 @@ func computeResultFields(validationError error) (string, string, []ValidationErr
 			if err != nil {
 				return "", "", nil, err
 			}
+		}
+		if len(validationErrors) == 0 {
+			errorTitle = validationError.Error()
 		}
 	}
 	return status, errorTitle, validationErrors, nil
