@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"os"
+	"static-openapivalidator/logger"
 	"static-openapivalidator/reports"
 	"strings"
 )
@@ -20,6 +21,7 @@ type Reporter struct {
 }
 
 func (r Reporter) Generate(report reports.Report) error {
+	logger.Log("Reporting: generating HTML report")
 	bytes, err := json.Marshal(report)
 	if err != nil {
 		return err

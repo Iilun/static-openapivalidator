@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
+	"static-openapivalidator/logger"
 )
 
 const (
@@ -17,6 +18,7 @@ const (
 
 func Validate(results []TestResult, ctx context.Context) ([]ValidationResult, error) {
 	var final []ValidationResult
+	logger.Log("Validator: Validating %d results", len(results))
 	for i := range results {
 		validationResults, err := validateResult(results[i], ctx)
 		if err != nil {

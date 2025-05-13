@@ -9,6 +9,7 @@ import (
 	"github.com/gobwas/glob"
 	"gopkg.in/yaml.v3"
 	"os"
+	"static-openapivalidator/logger"
 	test_report "static-openapivalidator/parser"
 	"static-openapivalidator/reports"
 	"static-openapivalidator/reports/html"
@@ -18,12 +19,15 @@ import (
 )
 
 func (params *Params) Execute() error {
+	logger.Enabled = params.Debug
+
 	err := struct_validator.New().Struct(params)
 	if err != nil {
 		// TODO: improve error messages
 		return errors.New("invalid input: " + err.Error())
 	}
 
+	logger.Log("Loading configuration from file")
 	err = params.loadConfig()
 	if err != nil {
 		return err
@@ -100,12 +104,14 @@ func compileGlobs(array []string) ([]glob.Glob, error) {
 
 func (params *Params) checkResponses() ([]validator.ValidationResult, error) {
 	// Load open api ref
+	logger.Log("OpenAPI Spec: loading")
 	loader := &openapi3.Loader{Context: params.Ctx, IsExternalRefsAllowed: true}
 	doc, err := loader.LoadFromFile(params.ApiFilePath)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Log("OpenAPI Spec: validating")
 	// Validate document
 	err = doc.Validate(params.Ctx)
 	if err != nil {
@@ -114,6 +120,7 @@ func (params *Params) checkResponses() ([]validator.ValidationResult, error) {
 
 	if params.config.IgnoreServers {
 		// Ignoring servers from spec so requests on any host matches
+		logger.Log("OpenAPI Spec: enabling IgnoreServers")
 		doc.Servers = openapi3.Servers{}
 	}
 
@@ -123,11 +130,13 @@ func (params *Params) checkResponses() ([]validator.ValidationResult, error) {
 	}
 
 	// Parse file
+	logger.Log("%s: getting parser", params.Format)
 	parser, err := getParser(params.Format)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Log("%s: parsing results from files", params.Format)
 	results, err := parser.Parse(params.ReportFilePaths, router, params.config)
 	if err != nil {
 		return nil, err
@@ -141,17 +150,21 @@ func (params *Params) logResults(results []validator.ValidationResult) (*reports
 	var reporters []reports.Reporter
 
 	if params.HtmlFilePath != "" {
+		logger.Log("Reporting: enabling HTML reporter")
 		reporters = append(reporters, html.NewReporter(params.HtmlFilePath))
 	}
 
 	if params.JsonFilePath != "" {
+		logger.Log("Reporting: enabling JSON reporter")
 		reporters = append(reporters, json.NewReporter(params.JsonFilePath))
 	}
 
 	if params.JunitFilePath != "" {
+		logger.Log("Reporting: enabling JUNIT reporter")
 		reporters = append(reporters, junit.NewReporter(params.JunitFilePath))
 	}
 
+	logger.Log("Reporting: generating report on %d results", len(results))
 	report, err := reports.GenerateReport(results)
 	if err != nil {
 		return nil, err

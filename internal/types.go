@@ -14,6 +14,7 @@ type Params struct {
 	HtmlFilePath    string   `validate:"omitempty,filepath"`
 	JsonFilePath    string   `validate:"omitempty,filepath"`
 	ConfigFilePath  string   `validate:"omitempty,file"`
+	Debug           bool
 	config          validator.Config
 }
 

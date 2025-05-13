@@ -6,6 +6,7 @@ import (
 	"fmt"
 	junit_xml "github.com/jstemmer/go-junit-report/v2/junit"
 	"os"
+	"static-openapivalidator/logger"
 	"static-openapivalidator/reports"
 	"static-openapivalidator/validator"
 	"strings"
@@ -20,8 +21,9 @@ type Reporter struct {
 }
 
 func (r Reporter) Generate(report reports.Report) error {
-	// Group results by URL
+	logger.Log("Reporting: generating JUNIT report")
 
+	// Group results by URL
 	groups := make(map[string][]validator.ValidationResult)
 
 	for i := range report.Results {
