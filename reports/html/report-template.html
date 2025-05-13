@@ -496,14 +496,14 @@
             depth: String
         },
         setup(props) {
-            // const message = naive.useMessage()
+            const handleClick = (event) => {
+                event.stopPropagation();
+                navigator.clipboard.writeText(props.code);
+            };
+
             return {
-                handleClick() {
-                    navigator.clipboard.writeText(props.code).then(() => {
-                        // message.success(props.successText)
-                    })
-                }
-            }
+                handleClick
+            };
         }
     })
     app.use(naive);
